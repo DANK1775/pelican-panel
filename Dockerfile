@@ -6,7 +6,9 @@
 FROM --platform=$TARGETOS/$TARGETARCH composer:2.7 AS composer
 WORKDIR /build
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
+# RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
+RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --ignore-platform-reqs
+
 
 # ================================
 # Stage 1-2: Yarn Install
