@@ -1,0 +1,39 @@
+services:
+  panel:
+    image: ${PANEL_IMAGE:-ghcr.io/tu_usuario/panel:latest}
+    restart: always
+    ports:
+      - "${PANEL_PORT:-8080}:80"
+    environment:
+      TZ: ${APP_TIMEZONE:-America/Costa_Rica}
+    volumes:
+      - panel-data:/pelican-data
+    depends_on:
+      - database
+      - cache
+
+  database:
+    image: mariadb:10.11
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+
+  cache:
+    image: redis:alpine
+    restart: always
+    command: /bin/sh -c 'redis-server --requirepass "$${REDIS_PASSWORD}"'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+
+volumes:
+  panel-data:
+  db-data:
+  redis-data:
