@@ -1,3 +1,5 @@
+# syntax=docker.io/docker/dockerfile:1.13-labs
+
 # ================================
 # Stage 1-1: Composer Install
 # ================================
