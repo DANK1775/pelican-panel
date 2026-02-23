@@ -35,7 +35,8 @@ FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarnbuild
 WORKDIR /build
 COPY --exclude=docker/ . ./
 COPY --from=yarn /build/node_modules ./node_modules
-RUN yarn run build
+# RUN yarn run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" yarn run build
 
 # ================================
 # Stage 5: Build Final Application Image
