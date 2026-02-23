@@ -38,14 +38,23 @@ RUN yarn run build
 # ================================
 # Stage 5: Build Final Application Image
 # ================================
-# Usamos una imagen PHP FPM de Alpine probada
-FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/pelican-dev/base-php:latest AS final
+# FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/pelican-dev/base-php:latest AS final
+FROM --platform=$TARGETOS/$TARGETARCH php:8.3-fpm-alpine AS final
 
 WORKDIR /var/www/html
+# RUN apk add --no-cache \
+#    caddy ca-certificates supervisor supercronic fcgi \
+#    zip unzip 7zip bzip2-dev yarn git
 
 RUN apk add --no-cache \
     caddy ca-certificates supervisor supercronic fcgi \
-    zip unzip 7zip bzip2-dev yarn git
+    zip unzip 7zip bzip2-dev yarn git \
+    libzip-dev libpng-dev libjpeg-turbo-dev freetype-dev \
+    # new lines to install connectors for pelican (laravel)
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql bcmath gd zip
+
+
 
 COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 COPY --chown=root:www-data --chmod=770 --from=composerbuild /build .
