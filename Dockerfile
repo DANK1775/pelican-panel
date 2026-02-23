@@ -13,7 +13,8 @@ RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --ig
 # ================================
 # Stage 1-2: Yarn Install
 # ================================
-FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarn
+# FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarn
+FROM --platform=$BUILDPLATFORM node:20-alpine AS yarn
 WORKDIR /build
 COPY package.json yarn.lock ./
 RUN yarn config set network-timeout 300000 && yarn install --frozen-lockfile
@@ -31,7 +32,8 @@ RUN composer dump-autoload --optimize
 # ================================
 # Stage 2-2: Build Frontend Assets
 # ================================
-FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarnbuild
+# FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarnbuild
+FROM --platform=$BUILDPLATFORM node:20-alpine AS yarnbuild
 WORKDIR /build
 COPY --exclude=docker/ . ./
 COPY --from=yarn /build/node_modules ./node_modules
