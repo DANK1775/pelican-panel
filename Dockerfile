@@ -6,14 +6,11 @@
 FROM --platform=$TARGETOS/$TARGETARCH composer:2.7 AS composer
 WORKDIR /build
 COPY composer.json composer.lock ./
-# RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
 RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --ignore-platform-reqs
-
 
 # ================================
 # Stage 1-2: Yarn Install
 # ================================
-# FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarn
 FROM --platform=$BUILDPLATFORM node:20-alpine AS yarn
 WORKDIR /build
 COPY package.json yarn.lock ./
@@ -32,33 +29,27 @@ RUN composer dump-autoload --optimize
 # ================================
 # Stage 2-2: Build Frontend Assets
 # ================================
-# FROM --platform=$TARGETOS/$TARGETARCH node:20-alpine AS yarnbuild
 FROM --platform=$BUILDPLATFORM node:20-alpine AS yarnbuild
 WORKDIR /build
 COPY --exclude=docker/ . ./
+# CRÍTICO: Copiar vendor/ ANTES de hacer el build
+COPY --from=composerbuild /build/vendor ./vendor
 COPY --from=yarn /build/node_modules ./node_modules
 RUN yarn run build
 
 # ================================
-# Stage 5: Build Final Application Image
+# Stage 3: Build Final Application Image
 # ================================
-# FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/pelican-dev/base-php:latest AS final
 FROM --platform=$TARGETOS/$TARGETARCH php:8.3-fpm-alpine AS final
 
 WORKDIR /var/www/html
-# RUN apk add --no-cache \
-#    caddy ca-certificates supervisor supercronic fcgi \
-#    zip unzip 7zip bzip2-dev yarn git
 
 RUN apk add --no-cache \
     caddy ca-certificates supervisor supercronic fcgi \
     zip unzip 7zip bzip2-dev yarn git \
     libzip-dev libpng-dev libjpeg-turbo-dev freetype-dev \
-    # new lines to install connectors for pelican (laravel)
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql bcmath gd zip
-
-
 
 COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 COPY --chown=root:www-data --chmod=770 --from=composerbuild /build .
