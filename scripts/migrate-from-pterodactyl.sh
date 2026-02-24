@@ -163,11 +163,7 @@ log "Credenciales de Pelican DB leídas correctamente"
 echo ""
 echo "--- Paso 3/5: Importando base de datos en contenedor ---"
 
-# Copiar dump al contenedor
-docker cp "${DUMP_FILE}" "${DB_CONTAINER}:/tmp/pterodactyl.sql"
-log "Dump copiado al contenedor"
-
-# Importar usando root
+# Importar usando root (stdin desde el host)
 docker exec -i "${DB_CONTAINER}" mariadb \
     -u root \
     -p"${MYSQL_ROOT_PASSWORD}" \
@@ -176,17 +172,11 @@ docker exec -i "${DB_CONTAINER}" mariadb \
 
 log "Base de datos importada correctamente"
 
-# Limpiar dump del contenedor
-docker exec "${DB_CONTAINER}" rm -f /tmp/pterodactyl.sql
-
 # ===========================================
 # Paso 4: Preparar .env para Pelican
 # ===========================================
 echo ""
 echo "--- Paso 4/5: Configurando .env de Pelican ---"
-
-# Obtener volumen panel-data
-PANEL_CONTAINER=$(docker compose ps -q panel 2>/dev/null || echo "")
 
 # Escribir el .env en el volumen de pelican-data
 # Usamos el APP_KEY original de Pterodactyl para no romper datos encriptados
