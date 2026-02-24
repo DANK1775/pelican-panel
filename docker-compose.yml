@@ -31,6 +31,16 @@ services:
       APP_DEBUG: "false"
       BEHIND_PROXY: ${BEHIND_PROXY:-false}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      XDG_DATA_HOME: /pelican-data
+      ## --- Mail (opcional, configurable desde el panel) ---
+      MAIL_DRIVER: ${MAIL_DRIVER:-log}
+      # MAIL_HOST: ${MAIL_HOST:-}
+      # MAIL_PORT: ${MAIL_PORT:-}
+      # MAIL_FROM: ${MAIL_FROM:-}
+      # MAIL_USERNAME: ${MAIL_USERNAME:-}
+      # MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      # MAIL_SCHEME: ${MAIL_SCHEME:-}
+      # LE_EMAIL: ${LE_EMAIL:-}  # Solo si usas HTTPS directo sin proxy
     volumes:
       - panel-data:/pelican-data
       - panel-logs:/var/www/html/storage/logs
@@ -54,7 +64,7 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -71,7 +81,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 30s
       timeout: 10s
       retries: 5
