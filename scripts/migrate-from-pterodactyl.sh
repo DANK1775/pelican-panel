@@ -24,7 +24,7 @@ set -euo pipefail
 #   sudo bash scripts/migrate-from-pterodactyl.sh
 #
 # Variables de entorno opcionales:
-#   PTERO_DIR       Ruta de Pterodactyl (default: /etc/www/pterodactyl)
+#   PTERO_DIR       Ruta de Pterodactyl (default: /var/www/pterodactyl)
 #   PTERO_ENV       Ruta del .env de Pterodactyl (default: $PTERO_DIR/.env)
 #   COMPOSE_DIR     Ruta donde está docker-compose.yml de Pelican
 #   BACKUP_DIR      Directorio para backups (default: /tmp/ptero-migration)
@@ -40,7 +40,7 @@ warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
 # --- Configuración ---
-PTERO_DIR="${PTERO_DIR:-/etc/www/pterodactyl}"
+PTERO_DIR="${PTERO_DIR:-/var/www/pterodactyl}"
 PTERO_ENV="${PTERO_ENV:-${PTERO_DIR}/.env}"
 COMPOSE_DIR="${COMPOSE_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 BACKUP_DIR="${BACKUP_DIR:-/tmp/ptero-migration}"
@@ -201,8 +201,15 @@ REDIS_PASSWORD=$(grep -E "^REDIS_PASSWORD=" "${COMPOSE_DIR}/.env" 2>/dev/null | 
 
 # Escribir .env al volumen via contenedor temporal
 # Resolver nombre real del volumen (prefijo del proyecto compose)
+# Si no existe aún, crearlo arrancando el servicio en modo --no-start
 PANEL_VOLUME=$(docker volume ls -q --filter "name=panel-data" | head -1)
-[ -n "${PANEL_VOLUME}" ] || error "No se encontró el volumen panel-data. ¿Está creado el stack?"
+if [ -z "${PANEL_VOLUME}" ]; then
+    warn "Volumen panel-data no encontrado, creándolo..."
+    docker compose up --no-start panel 2>/dev/null || true
+    PANEL_VOLUME=$(docker volume ls -q --filter "name=panel-data" | head -1)
+fi
+[ -n "${PANEL_VOLUME}" ] || error "No se pudo crear el volumen panel-data. Verifica el docker-compose.yml."
+log "Volumen encontrado: ${PANEL_VOLUME}"
 
 echo "${PELICAN_ENV_CONTENT}" | docker run --rm -i \
     -v "${PANEL_VOLUME}:/pelican-data" \
