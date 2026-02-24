@@ -10,7 +10,7 @@ if [ -f /pelican-data/.env ]; then
     ## skip if it looks like it might try to execute code
     if (grep "${VAR}" .env | grep -qE "\$\(|=\`|\$#"); then echo "var in .env may be executable or a comment, skipping"; continue; fi
     # if the variable is in .env then set it
-    if (grep -q "${VAR}" .env); then 
+    if (grep -q "${VAR}" .env); then
       echo "loading ${VAR} from .env"
       export "$(grep "${VAR}" .env | sed 's/"//g')"
       continue
@@ -56,7 +56,7 @@ if [ "${APP_INSTALLED}" = "true" ];  then
   else
     echo "using sqlite database"
   fi
-  
+
   # run migration
   php artisan migrate --force
 fi

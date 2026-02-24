@@ -1,6 +1,6 @@
 #!/bin/ash -e
 
-if [ ${SKIP_CADDY} ! "true" ]; then
+if [ "${SKIP_CADDY}" != "true" ]; then
     curl -f http://localhost/up || exit 1
 fi
 

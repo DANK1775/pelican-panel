@@ -1,21 +1,51 @@
 services:
   panel:
-    image: ${PANEL_IMAGE:-ghcr.io/tu_usuario/panel:latest}
+    image: ${PANEL_IMAGE:-ghcr.io/dank1775/pelican-panel:latest}
     restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     ports:
       - "${PANEL_PORT:-8080}:80"
+    networks:
+      - pelican-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       TZ: ${APP_TIMEZONE:-America/Costa_Rica}
+      ## --- Conexión a la base de datos ---
+      DB_CONNECTION: "mariadb"
+      DB_HOST: "database"
+      DB_PORT: "3306"
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ## --- Conexión a Redis ---
+      CACHE_STORE: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_CONNECTION: "redis"
+      REDIS_HOST: "cache"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ## --- App config ---
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+      BEHIND_PROXY: ${BEHIND_PROXY:-false}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     volumes:
       - panel-data:/pelican-data
+      - panel-logs:/var/www/html/storage/logs
     depends_on:
-      - database
-      - cache
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
 
   database:
     image: mariadb:10.11
     restart: always
     command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - pelican-net
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
@@ -23,17 +53,59 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   cache:
     image: redis:alpine
     restart: always
     command: /bin/sh -c 'redis-server --requirepass "$${REDIS_PASSWORD}"'
+    networks:
+      - pelican-net
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  ## ==========================================
+  ## Watchtower: auto-actualiza contenedores
+  ## Solo vigila el servicio "panel".
+  ## Cuando GitHub Actions pushea una nueva imagen,
+  ## Watchtower la detecta, la descarga y reinicia
+  ## SOLO el panel — DB y Redis NO se tocan.
+  ## ==========================================
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    networks:
+      - pelican-net
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: "300" # Revisa cada 5 minutos
+      WATCHTOWER_SCOPE: "pelican"
+      WATCHTOWER_LABEL_ENABLE: "true" # Solo actualiza contenedores con la label
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      ## Si tu registro (ghcr.io) es privado, monta el config de Docker:
+      # - ~/.docker/config.json:/config.json:ro
 
 volumes:
   panel-data:
+  panel-logs:
   db-data:
   redis-data:
+
+
+networks:
+  pelican-net:
+    driver: bridge
