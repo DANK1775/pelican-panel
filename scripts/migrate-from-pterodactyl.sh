@@ -213,6 +213,7 @@ APP_URL=${PANEL_APP_URL}
 APP_ENV=production
 APP_DEBUG=false
 APP_INSTALLED=true
+BEHIND_PROXY=${BEHIND_PROXY_VAL:-false}
 
 DB_CONNECTION=mariadb
 DB_HOST=database
@@ -478,6 +479,22 @@ docker compose up -d --force-recreate panel
 echo ""
 log "Esperando a que el panel arranque..."
 sleep 10
+
+# ===========================================
+# Paso 7: Corregir tokens encriptados (Payload is invalid)
+# ===========================================
+echo ""
+echo "--- Paso 7: Corrigiendo tokens de Nodos y 2FA ---"
+log "Generando nuevos tokens temporales para evitar errores de desencriptación..."
+
+docker compose exec -T panel php artisan tinker <<EOF
+DB::table('nodes')->update(['daemon_token' => encrypt('temp_token_please_regenerate'), 'daemon_token_id' => 'temp_id']);
+DB::table('users')->update(['totp_secret' => null]);
+EOF
+
+docker compose exec -T panel php artisan cache:clear
+docker compose exec -T panel php artisan view:clear
+docker compose exec -T panel php artisan config:clear
 
 # Verificar logs para confirmar arranque
 echo ""

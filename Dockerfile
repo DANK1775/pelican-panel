@@ -46,10 +46,10 @@ WORKDIR /var/www/html
 
 RUN apk add --no-cache \
     caddy ca-certificates supervisor supercronic fcgi \
-    zip unzip 7zip bzip2-dev yarn git \
+    zip unzip 7zip bzip2-dev yarn git icu-dev \
     libzip-dev libpng-dev libjpeg-turbo-dev freetype-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql bcmath gd zip
+    && docker-php-ext-install pdo_mysql bcmath gd zip intl
 
 COPY --from=composer:2.7 /usr/bin/composer /usr/local/bin/composer
 COPY --chown=root:www-data --chmod=770 --from=composerbuild /build .
