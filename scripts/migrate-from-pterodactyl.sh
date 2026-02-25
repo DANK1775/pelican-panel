@@ -489,7 +489,12 @@ log "Generando nuevos tokens temporales para evitar errores de desencriptación.
 
 docker compose exec -T panel php artisan tinker <<EOF
 DB::table('nodes')->update(['daemon_token' => encrypt('temp_token_please_regenerate'), 'daemon_token_id' => 'temp_id']);
-DB::table('users')->update(['totp_secret' => null]);
+if (Schema::hasColumn('users', 'totp_secret')) {
+    DB::table('users')->update(['totp_secret' => null]);
+}
+if (Schema::hasColumn('users', 'two_factor_secret')) {
+    DB::table('users')->update(['two_factor_secret' => null]);
+}
 EOF
 
 docker compose exec -T panel php artisan cache:clear
